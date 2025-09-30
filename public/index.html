@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社内問合せチャットボット</title>
+    <style>
+        body { font-family: 'Meiryo', 'Hiragino Sans', sans-serif; margin: 0; background-color: #f4f4f4; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .chat-container { width: 100%; max-width: 600px; height: 90vh; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        .header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .header img { max-height: 30px; }
+        .title-bar { background-color: #4A6C9B; color: white; text-align: center; padding: 12px; font-weight: bold; font-size: 1.1em; }
+        .chat-box { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .message { max-width: 75%; padding: 10px 15px; border-radius: 18px; line-height: 1.5; }
+        .user-message { background-color: #98FB98; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .bot-message { background-color: #fff; border: 1px solid #ddd; align-self: flex-start; border-bottom-left-radius: 4px; display: flex; align-items: flex-start; gap: 10px; }
+        .bot-message pre { margin: 0; white-space: pre-wrap; word-wrap: break-word; font-family: inherit; font-size: inherit; }
+        .bot-icon { font-size: 24px; } /* アイコンの代わり */
+        .input-area { padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; }
+        #question-input { flex-grow: 1; padding: 12px; border: 1px solid #ccc; border-radius: 20px; font-size: 16px; }
+        #send-button { padding: 12px 20px; background-color: #4A6C9B; color: white; border: none; border-radius: 20px; font-size: 16px; cursor: pointer; }
+        #send-button:disabled { background-color: #aaa; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="header">
+            <img src="kotobuki_logo.png" alt="株式会社コトブキソリューション">
+            <img src="kemco_logo.png" alt="KEMCO">
+        </div>
+        <div class="title-bar">
+            社内問合せチャットボット
+        </div>
+        <div class="chat-box" id="chat-box">
+            <!-- メッセージはここに動的に追加されます -->
+        </div>
+        <form class="input-area" id="chat-form">
+            <input type="text" id="question-input" placeholder="問合せ" autocomplete="off">
+            <button type="submit" id="send-button">送信</button>
+        </form>
+    </div>
+
+    <script>
+        const chatForm = document.getElementById('chat-form');
+        const questionInput = document.getElementById('question-input');
+        const sendButton = document.getElementById('send-button');
+        const chatBox = document.getElementById('chat-box');
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const question = questionInput.value.trim();
+            if (!question) return;
+
+            // ユーザーのメッセージを表示
+            addMessage(question, 'user');
+            questionInput.value = '';
+            sendButton.disabled = true;
+
+            // ローディング表示
+            const loadingMessage = addMessage('考え中...', 'bot');
+
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: question }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('サーバーからの応答エラー');
+                }
+
+                const data = await response.json();
+                
+                // ローディングを回答で置き換え
+                loadingMessage.querySelector('pre').textContent = data.answer;
+
+            } catch (error) {
+                console.error('エラー:', error);
+                loadingMessage.querySelector('pre').textContent = 'エラーが発生しました。時間をおいて再度お試しください。';
+            } finally {
+                sendButton.disabled = false;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        });
+
+        function addMessage(text, type) {
+            const messageWrapper = document.createElement('div');
+            messageWrapper.classList.add('message', `${type}-message`);
+            
+            if (type === 'bot') {
+                const icon = document.createElement('div');
+                icon.classList.add('bot-icon');
+                icon.innerHTML = '🤖'; // 簡単なアイコン
+                messageWrapper.appendChild(icon);
+
+                const pre = document.createElement('pre');
+                pre.textContent = text;
+                messageWrapper.appendChild(pre);
+            } else {
+                messageWrapper.textContent = text;
+            }
+
+            chatBox.appendChild(messageWrapper);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return messageWrapper;
+        }
+    </script>
+</body>
+</html>

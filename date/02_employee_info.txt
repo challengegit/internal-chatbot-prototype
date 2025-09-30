@@ -1,0 +1,11 @@
+氏名: 鈴木 一郎
+所属: 営業部
+メールアドレス: suzuki.ichiro@example.com
+
+氏名: 高橋 花子
+所属: 開発部
+メールアドレス: takahashi.hanako@example.com
+
+氏名: 田中 太郎
+所属: 総務部
+メールアドレス: tanaka.taro@example.com

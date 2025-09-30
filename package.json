@@ -1,0 +1,14 @@
+{
+  "name": "internal-chatbot-prototype",
+  "version": "1.0.0",
+  "description": "社内問合せチャットボット",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.3.1",
+    "express": "^4.18.2",
+    "dotenv": "^16.4.5"
+  }
+}
