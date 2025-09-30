@@ -2,7 +2,7 @@ const express = require('express');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config(); // ローカル開発用に.envファイルを読み込む
+require('dotenv').config();
 
 // --- 初期設定 ---
 const app = express();
@@ -15,51 +15,36 @@ if (!GEMINI_API_KEY) {
   process.exit(1);
 }
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+const model = genAI.getGenerativeModel({ model: 'gemini-1.0-pro' });
 
 // --- ミドルウェア設定 ---
-app.use(express.json()); // JSONリクエストボディをパース
-app.use(express.static(path.join(__dirname, 'public'))); // publicディレクトリを静的ファイルとして提供
-
-// --- RAG用データの読み込み ---
-const dataDir = path.join(__dirname, 'data');
-let ragContent = '';
-
-try {
-  const files = fs.readdirSync(dataDir).sort(); // ファイル名順で読み込む
-  files.forEach(file => {
-    if (path.extname(file) === '.txt') {
-      ragContent += `--- ${file}からの情報 ---\n`;
-      ragContent += fs.readFileSync(path.join(dataDir, file), 'utf-8');
-      ragContent += '\n\n';
-    }
-  });
-  console.log('RAG用の社内情報ファイルを正常に読み込みました。');
-} catch (error) {
-  console.error('RAG用のデータファイル読み込み中にエラーが発生しました:', error);
-  // Renderデプロイ時に最初はdataフォルダがないため、エラーを無視して続行
-  console.log('注意: dataフォルダが見つからない可能性がありますが、デプロイプロセスを続行します。');
-}
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 // --- APIエンドポイント ---
 app.post('/ask', async (req, res) => {
-  // 起動後に再度RAGデータを読み込む（Renderのスリープ対策）
-  if (ragContent === '') {
-     try {
-        const files = fs.readdirSync(dataDir).sort();
-        files.forEach(file => {
-          if (path.extname(file) === '.txt') {
-            ragContent += `--- ${file}からの情報 ---\n`;
-            ragContent += fs.readFileSync(path.join(dataDir, file), 'utf-8');
-            ragContent += '\n\n';
-          }
-        });
-      } catch(e) { /* ignore */ }
-  }
-  
   const userQuestion = req.body.question;
   if (!userQuestion) {
     return res.status(400).json({ error: '質問が入力されていません。' });
+  }
+
+  // ★★★ 変更点(1) ★★★
+  // RAG用のデータ読み込み処理を、APIリクエストの内部に移動しました。
+  let ragContent = '';
+  try {
+    const dataDir = path.join(__dirname, 'data');
+    const files = fs.readdirSync(dataDir).sort();
+    files.forEach(file => {
+      if (path.extname(file) === '.txt') {
+        ragContent += `--- ${file}からの情報 ---\n`;
+        ragContent += fs.readFileSync(path.join(dataDir, file), 'utf-8');
+        ragContent += '\n\n';
+      }
+    });
+  } catch (error) {
+    console.error('RAG用のデータファイル読み込み中にエラーが発生しました:', error);
+    // ファイルが読み込めなかった場合は、その旨をAIの応答とする
+    return res.status(500).json({ answer: '申し訳ありません。内部情報の読み込みに失敗しました。' });
   }
 
   // Geminiに渡すシステムプロンプト（ペルソナ設定）
