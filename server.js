@@ -15,7 +15,7 @@ if (!GEMINI_API_KEY) {
   process.exit(1);
 }
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-1.0-pro' });
+const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
 // --- ミドルウェア設定 ---
 app.use(express.json()); // JSONリクエストボディをパース
